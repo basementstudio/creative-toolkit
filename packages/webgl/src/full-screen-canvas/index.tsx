@@ -1,13 +1,14 @@
 import { Canvas as R3FCanvas, RootState } from "@react-three/fiber";
 import { useContextBridge } from "@react-three/drei";
 
-import { tunnel } from "@bsmnt/tunnel";
+import tunnel from "tunnel-rat";
 import { Scroll } from "./scroll";
 import { ComponentProps, useEffect, useRef } from "react";
 import type { PerspectiveCamera } from "three";
 import { gsap } from "gsap";
 
-const mainTunnel = tunnel(["scroll", "no-scroll"]);
+const scrollTunnel = tunnel();
+const noScrollTunnel = tunnel();
 
 type CanvasProps = Omit<ComponentProps<typeof R3FCanvas>, "children"> & {
   onUnmount?: () => void;
@@ -53,6 +54,8 @@ export const FullScreenCanvas = ({
           state?.advance(timestamp);
         };
 
+        // TODO add stats.js
+
         unmountFunc.current = () => {
           gsap.ticker.remove(updateFunc);
         };
@@ -65,9 +68,9 @@ export const FullScreenCanvas = ({
     >
       <ContextBridge>
         <Scroll>
-          <mainTunnel.OutScroll />
+          <scrollTunnel.Out />
         </Scroll>
-        <mainTunnel.OutNoScroll />
+        <noScrollTunnel.Out />
 
         {children}
       </ContextBridge>
@@ -75,5 +78,5 @@ export const FullScreenCanvas = ({
   );
 };
 
-FullScreenCanvas.InScroll = mainTunnel.InScroll;
-FullScreenCanvas.InNoScroll = mainTunnel.InNoScroll;
+FullScreenCanvas.InScroll = scrollTunnel.In;
+FullScreenCanvas.InNoScroll = noScrollTunnel.In;

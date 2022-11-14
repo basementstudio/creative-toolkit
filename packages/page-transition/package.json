@@ -1,5 +1,5 @@
 {
-  "name": "@bsmnt/tunnel",
+  "name": "@bsmnt/page-transition",
   "author": "basement.studio <dev@basement.studio>",
   "version": "0.0.1",
   "main": "./dist/index.js",
@@ -15,9 +15,7 @@
     "react": ">=18",
     "react-dom": ">=18"
   },
-  "dependencies": {
-    "zustand": "^4.1.4"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/react": "^18.0.17",
     "@types/react-dom": "^18.0.6",
