@@ -3,20 +3,21 @@ import * as React from "react";
 import { clearSavedPageStyles, savePageStyles } from "./save-page-styles";
 import { useIsoLayoutEffect } from "./hooks/use-iso-layout-effect";
 
-type TransitionCallback = (newPathname: string) => Promise<void>;
-type TransitionOptions = { index?: number; kill?: boolean };
+type TransitionCallback = (newPathname: string) => void | Promise<void>;
+type TransitionOptions = { kill?: boolean };
 type Status = "idle" | "transitioning";
 
 type GetTransitionSpace = (
   callback: TransitionCallback,
   options?: TransitionOptions
-) => void;
+) => () => void;
 const TransitionContext = React.createContext<
   | {
       transitionsListRef: React.MutableRefObject<
         Array<{
           callback: TransitionCallback;
           options?: TransitionOptions;
+          id: number;
         }>
       >;
       getTransitionSpace: GetTransitionSpace;
@@ -29,26 +30,37 @@ const SetStatusContext = React.createContext<
   { setStatus: React.Dispatch<React.SetStateAction<Status>> } | undefined
 >(undefined);
 
+let id = 0;
+
 const TransitionContextProvider = ({
   children,
 }: {
   children?: React.ReactNode;
 }) => {
   const transitionsListRef = React.useRef<
-    Array<{ callback: TransitionCallback; options?: TransitionOptions }>
+    Array<{
+      callback: TransitionCallback;
+      options?: TransitionOptions;
+      id: number;
+    }>
   >([]);
   const [status, setStatus] = React.useState<Status>("idle");
 
   const getTransitionSpace: GetTransitionSpace = React.useCallback(
     (callback: TransitionCallback, options) => {
-      if (options?.index) {
-        transitionsListRef.current.splice(options.index, 0, {
-          callback,
-          options,
-        });
-      } else {
-        transitionsListRef.current.push({ callback, options });
-      }
+      const transitionId = id++;
+
+      transitionsListRef.current.push({
+        callback,
+        options,
+        id: transitionId,
+      });
+
+      return () => {
+        transitionsListRef.current = transitionsListRef.current.filter(
+          (t) => t.id !== transitionId
+        );
+      };
     },
     []
   );
@@ -68,7 +80,7 @@ const usePageTransition = () => {
   const ctx = React.useContext(TransitionContext);
   if (ctx === undefined) {
     throw new Error(
-      "usePageTransition must be used within a PageTransitionsProvider"
+      "usePageTransition must be used within a PageTransitionProvider"
     );
   }
   return ctx;
@@ -78,7 +90,7 @@ const useSetStatus = () => {
   const ctx = React.useContext(SetStatusContext);
   if (ctx === undefined) {
     throw new Error(
-      "useSetStatus must be used within a PageTransitionsProvider"
+      "useSetStatus must be used within a PageTransitionProvider"
     );
   }
   return ctx;
@@ -139,7 +151,7 @@ const TransitionLayout = React.memo(
   }
 );
 
-const PageTransitionsProvider = ({
+const PageTransitionProvider = ({
   children,
 }: {
   children?: React.ReactNode;
@@ -151,4 +163,4 @@ const PageTransitionsProvider = ({
   );
 };
 
-export { PageTransitionsProvider, usePageTransition };
+export { PageTransitionProvider, usePageTransition };

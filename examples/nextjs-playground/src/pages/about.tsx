@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { PageTemplate } from "../components/page-template";
 import { gsap } from "gsap";
 
-export default function Home() {
-  const { getTransitionSpace, transitionsListRef } = usePageTransition();
+export default function About() {
+  const { getTransitionSpace } = usePageTransition();
   const animationContainerRef = useRef<HTMLDivElement>(null);
   const [fadedIn, setFadedIn] = useState(false);
 
@@ -14,7 +14,7 @@ export default function Home() {
       if (animationContainerRef.current) {
         await gsap.to(animationContainerRef.current, {
           opacity: 0,
-          y: -50,
+          y: 50,
         });
       }
     });
@@ -45,10 +45,10 @@ export default function Home() {
       ref={animationContainerRef}
       style={{
         opacity: 0,
-        transform: "translateY(-50px)",
+        transform: "translateY(50px)",
       }}
     >
-      <PageTemplate fadedIn={fadedIn} />
+      <PageTemplate fadedIn={fadedIn} isAbout />
     </div>
   );
 }
