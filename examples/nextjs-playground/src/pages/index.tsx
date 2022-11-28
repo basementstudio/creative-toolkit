@@ -4,7 +4,7 @@ import { PageTemplate } from "../components/page-template";
 import { gsap } from "gsap";
 
 export default function Home() {
-  const { getTransitionSpace, transitionsListRef } = usePageTransition();
+  const { getTransitionSpace } = usePageTransition();
   const animationContainerRef = useRef<HTMLDivElement>(null);
   const [fadedIn, setFadedIn] = useState(false);
 
