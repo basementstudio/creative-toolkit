@@ -3,7 +3,7 @@ import * as React from "react";
 import { clearSavedPageStyles, savePageStyles } from "./save-page-styles";
 import { useIsoLayoutEffect } from "./hooks/use-iso-layout-effect";
 
-type TransitionCallback = (newPathname: string) => void | Promise<void>;
+type TransitionCallback = (newPathname: string) => Promise<void | (() => void)>;
 type TransitionOptions = { kill?: boolean };
 type Status = "idle" | "transitioning";
 
@@ -18,6 +18,7 @@ const TransitionContext = React.createContext<
           callback: TransitionCallback;
           options?: TransitionOptions;
           id: number;
+          cleanup: (() => void) | null;
         }>
       >;
       getTransitionSpace: GetTransitionSpace;
@@ -42,6 +43,7 @@ const TransitionContextProvider = ({
       callback: TransitionCallback;
       options?: TransitionOptions;
       id: number;
+      cleanup: (() => void) | null;
     }>
   >([]);
   const [status, setStatus] = React.useState<Status>("idle");
@@ -54,6 +56,7 @@ const TransitionContextProvider = ({
         callback,
         options,
         id: transitionId,
+        cleanup: null,
       });
 
       return () => {
@@ -127,7 +130,9 @@ const TransitionLayout = React.memo(
           setStatus("transitioning");
           const transitionsPromise = transitionsListRef.current.map(
             async (transition) => {
-              await transition.callback(newPathname);
+              transition.cleanup?.();
+              const newCleanup = await transition.callback(newPathname);
+              if (newCleanup) transition.cleanup = newCleanup;
               return transition;
             }
           );
