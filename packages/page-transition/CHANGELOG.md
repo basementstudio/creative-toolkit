@@ -1,5 +1,11 @@
 # @bsmnt/page-transition
 
+## 1.1.0
+
+### Minor Changes
+
+- improve page styles recovery timing
+
 ## 1.0.2
 
 ### Patch Changes
