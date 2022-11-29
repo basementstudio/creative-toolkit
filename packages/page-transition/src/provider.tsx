@@ -1,4 +1,5 @@
 import * as React from "react";
+import type { NextRouter } from "next/router";
 
 import { clearSavedPageStyles, savePageStyles } from "./save-page-styles";
 import { useIsoLayoutEffect } from "./hooks/use-iso-layout-effect";
@@ -101,7 +102,13 @@ const useSetStatus = () => {
 
 // This is another component so that it doesn't trigger a re-render in the context provider
 const TransitionLayout = React.memo(
-  ({ children }: { children?: React.ReactNode }) => {
+  ({
+    children,
+    nextRouter,
+  }: {
+    children?: React.ReactNode;
+    nextRouter: NextRouter | null;
+  }) => {
     const [displayChildren, setDisplayChildren] = React.useState(children);
     const { transitionsListRef } = usePageTransition();
     const { setStatus } = useSetStatus();
@@ -112,20 +119,40 @@ const TransitionLayout = React.memo(
       oldPathnameRef.current = window.location.pathname;
     }, []);
 
+    // if nextRouter is present, we make the next.js hack to save the page's styles
+    // see https://github.com/vercel/next.js/issues/17464
+    React.useEffect(() => {
+      if (!nextRouter) return;
+
+      function handleRouteChangeStart() {
+        savePageStyles();
+      }
+
+      nextRouter.events.on("routeChangeStart", handleRouteChangeStart);
+
+      return () => {
+        nextRouter.events.off("routeChangeStart", handleRouteChangeStart);
+      };
+    }, [nextRouter]);
+
+    const handleTransitionEnd = React.useCallback(() => {
+      if (!nextRouter) return;
+      clearSavedPageStyles();
+    }, [nextRouter]);
+
     useIsoLayoutEffect(() => {
       const newPathname = window.location.pathname;
       if (
         children !== displayChildren &&
         oldPathnameRef.current !== newPathname
       ) {
-        savePageStyles();
         if (transitionsListRef.current.length === 0) {
           // there are no outro animations, so immediately transition
           setDisplayChildren(children);
           oldPathnameRef.current = newPathname;
-          clearSavedPageStyles();
 
           setStatus("idle");
+          handleTransitionEnd();
         } else {
           setStatus("transitioning");
           const transitionsPromise = transitionsListRef.current.map(
@@ -143,7 +170,7 @@ const TransitionLayout = React.memo(
               transitionsListRef.current = resolvedTransitions.filter((t) =>
                 t.options?.kill ? false : true
               );
-              clearSavedPageStyles();
+              handleTransitionEnd();
             })
             .then(() => {
               setStatus("idle");
@@ -158,12 +185,16 @@ const TransitionLayout = React.memo(
 
 const PageTransitionProvider = ({
   children,
+  nextRouter,
 }: {
   children?: React.ReactNode;
+  nextRouter?: NextRouter;
 }) => {
   return (
     <TransitionContextProvider>
-      <TransitionLayout>{children}</TransitionLayout>
+      <TransitionLayout nextRouter={nextRouter ?? null}>
+        {children}
+      </TransitionLayout>
     </TransitionContextProvider>
   );
 };
