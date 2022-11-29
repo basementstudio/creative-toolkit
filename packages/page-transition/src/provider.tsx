@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { NextRouter } from "next/router";
 
-import { clearSavedPageStyles, savePageStyles } from "./save-page-styles";
+import { savePageStyles } from "./save-page-styles";
 import { useIsoLayoutEffect } from "./hooks/use-iso-layout-effect";
 
 type TransitionCallback = (newPathname: string) => Promise<void | (() => void)>;
@@ -110,7 +110,7 @@ const TransitionLayout = React.memo(
     nextRouter: NextRouter | null;
   }) => {
     const [displayChildren, setDisplayChildren] = React.useState(children);
-    const { transitionsListRef } = usePageTransition();
+    const { transitionsListRef, status } = usePageTransition();
     const { setStatus } = useSetStatus();
     const oldPathnameRef = React.useRef<string>("");
 
@@ -122,23 +122,10 @@ const TransitionLayout = React.memo(
     // if nextRouter is present, we make the next.js hack to save the page's styles
     // see https://github.com/vercel/next.js/issues/17464
     React.useEffect(() => {
-      if (!nextRouter) return;
-
-      function handleRouteChangeStart() {
+      if (status === "idle" && nextRouter) {
         savePageStyles();
       }
-
-      nextRouter.events.on("routeChangeStart", handleRouteChangeStart);
-
-      return () => {
-        nextRouter.events.off("routeChangeStart", handleRouteChangeStart);
-      };
-    }, [nextRouter]);
-
-    const handleTransitionEnd = React.useCallback(() => {
-      if (!nextRouter) return;
-      clearSavedPageStyles();
-    }, [nextRouter]);
+    }, [nextRouter, status]);
 
     useIsoLayoutEffect(() => {
       const newPathname = window.location.pathname;
@@ -152,7 +139,6 @@ const TransitionLayout = React.memo(
           oldPathnameRef.current = newPathname;
 
           setStatus("idle");
-          handleTransitionEnd();
         } else {
           setStatus("transitioning");
           const transitionsPromise = transitionsListRef.current.map(
@@ -170,7 +156,6 @@ const TransitionLayout = React.memo(
               transitionsListRef.current = resolvedTransitions.filter((t) =>
                 t.options?.kill ? false : true
               );
-              handleTransitionEnd();
             })
             .then(() => {
               setStatus("idle");
