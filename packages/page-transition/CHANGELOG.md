@@ -1,5 +1,11 @@
 # @bsmnt/page-transition
 
+## 1.0.2
+
+### Patch Changes
+
+- d5141b7: better nextjs support
+
 ## 1.0.1
 
 ### Patch Changes
