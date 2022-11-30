@@ -105,9 +105,11 @@ const TransitionLayout = React.memo(
   ({
     children,
     nextRouter,
+    unsafeCssPreservation,
   }: {
     children?: React.ReactNode;
     nextRouter: NextRouter | null;
+    unsafeCssPreservation: boolean | undefined;
   }) => {
     const [displayChildren, setDisplayChildren] = React.useState(children);
     const { transitionsListRef, status } = usePageTransition();
@@ -119,21 +121,54 @@ const TransitionLayout = React.memo(
       oldPathnameRef.current = window.location.pathname;
     }, []);
 
-    // if nextRouter is present, we make the next.js hack to save the page's styles
+    // if unsafeCssPreservation is present, we make the next.js hack to save the page's styles
     // see https://github.com/vercel/next.js/issues/17464
     React.useEffect(() => {
-      if (status === "idle" && nextRouter) {
+      if (status === "idle" && unsafeCssPreservation) {
         savePageStyles();
       }
-    }, [nextRouter, status]);
+    }, [unsafeCssPreservation, status]);
+
+    React.useEffect(() => {
+      if (!nextRouter) return;
+
+      function handleRouteChangeStart(newUrl: string) {
+        if (
+          hasChangedRoute({
+            children,
+            displayChildren,
+            newPathname: newUrl,
+            oldPathname: oldPathnameRef.current,
+          }) &&
+          hasPendingTransitions({ transitionsList: transitionsListRef.current })
+        ) {
+          setStatus("transitioning");
+        }
+      }
+
+      nextRouter.events.on("routeChangeStart", handleRouteChangeStart);
+
+      return () => {
+        nextRouter.events.off("routeChangeStart", handleRouteChangeStart);
+      };
+    }, [children, displayChildren, nextRouter, setStatus, transitionsListRef]);
 
     useIsoLayoutEffect(() => {
       const newPathname = window.location.pathname;
+
       if (
-        children !== displayChildren &&
-        oldPathnameRef.current !== newPathname
+        hasChangedRoute({
+          children,
+          displayChildren,
+          newPathname,
+          oldPathname: oldPathnameRef.current,
+        })
       ) {
-        if (transitionsListRef.current.length === 0) {
+        if (
+          !hasPendingTransitions({
+            transitionsList: transitionsListRef.current,
+          })
+        ) {
           // there are no outro animations, so immediately transition
           setDisplayChildren(children);
           oldPathnameRef.current = newPathname;
@@ -168,16 +203,43 @@ const TransitionLayout = React.memo(
   }
 );
 
+function hasChangedRoute({
+  children,
+  displayChildren,
+  oldPathname,
+  newPathname,
+}: {
+  children: React.ReactNode;
+  displayChildren: React.ReactNode;
+  oldPathname: string;
+  newPathname: string;
+}): boolean {
+  return children !== displayChildren && oldPathname !== newPathname;
+}
+
+function hasPendingTransitions({
+  transitionsList,
+}: {
+  transitionsList: unknown[];
+}): boolean {
+  return transitionsList.length > 0;
+}
+
 const PageTransitionProvider = ({
   children,
   nextRouter,
+  unsafeCssPreservation,
 }: {
   children?: React.ReactNode;
-  nextRouter?: NextRouter;
+  nextRouter: NextRouter | null;
+  unsafeCssPreservation?: boolean;
 }) => {
   return (
     <TransitionContextProvider>
-      <TransitionLayout nextRouter={nextRouter ?? null}>
+      <TransitionLayout
+        unsafeCssPreservation={unsafeCssPreservation}
+        nextRouter={nextRouter}
+      >
         {children}
       </TransitionLayout>
     </TransitionContextProvider>
