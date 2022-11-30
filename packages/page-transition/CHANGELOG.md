@@ -1,5 +1,11 @@
 # @bsmnt/page-transition
 
+## 2.0.0
+
+### Major Changes
+
+- 9e1851a: css preservation to optional, and improve nextjs timing
+
 ## 1.1.0
 
 ### Minor Changes
