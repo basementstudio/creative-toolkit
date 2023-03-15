@@ -1,8 +1,8 @@
 import * as React from "react";
 import type { NextRouter } from "next/router";
 
-import { savePageStyles } from "./save-page-styles";
 import { useIsoLayoutEffect } from "./hooks/use-iso-layout-effect";
+import { useNextCssRemovalPrevention } from "./hooks/use-next-css-removal-prevention";
 
 type TransitionCallback = (newPathname: string) => Promise<void | (() => void)>;
 type TransitionOptions = { kill?: boolean };
@@ -121,13 +121,8 @@ const TransitionLayout = React.memo(
       oldPathnameRef.current = window.location.pathname;
     }, []);
 
-    // if unsafeCssPreservation is present, we make the next.js hack to save the page's styles
-    // see https://github.com/vercel/next.js/issues/17464
-    React.useEffect(() => {
-      if (status === "idle" && unsafeCssPreservation) {
-        savePageStyles();
-      }
-    }, [unsafeCssPreservation, status]);
+    // credits https://github.com/vercel/next.js/issues/17464#issuecomment-1447335147
+    useNextCssRemovalPrevention({ disabled: !unsafeCssPreservation });
 
     React.useEffect(() => {
       if (!nextRouter) return;
