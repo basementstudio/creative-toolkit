@@ -1,5 +1,11 @@
 # @bsmnt/page-transition
 
+## 2.0.1
+
+### Patch Changes
+
+- ca809ff: improve css unmounting
+
 ## 2.0.0
 
 ### Major Changes
